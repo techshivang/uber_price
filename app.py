@@ -1,22 +1,33 @@
-import numpy as np
-from flask import Flask, request, jsonify, render_template
+import pandas as pd
+from flask import Flask, jsonify, request
 import pickle
-import math
 
-app=Flask(__name__)
-model=pickle.load(open('taxi.pkl','rb'))
 
-@app.route('/')
-def home():
-    return render_template('index.html')
+# load model
+model = pickle.load(open('taxi.pkl','rb'))
 
-@app.route('/predict', methods=['POST'])
+# app
+app = Flask(__name__)
+
+# routes
+@app.route('/', methods=['POST'])
+
 def predict():
-    int_features  = [int(x) for x in request.form.values()]
-    final_features = [np.array(int_features)]
-    prediction = model.predict(final_features)
-    output = round(prediction[0],2)
-    return render_template('index.html',prediction_text="Number of Weekly Rides Should be {}".format(math.floor(output)))
+    # get data
+    data = request.get_json(force=True)
 
-if __name__=="__main__":
-    app.run(debug=True)
+    # convert data into dataframe
+    data.update((x, [y]) for x, y in data.items())
+    data_df = pd.DataFrame.from_dict(data)
+
+    # predictions
+    result = model.predict(data_df)
+
+    # send back to browser
+    output = {'results': int(result[0])}
+
+    # return data
+    return jsonify(results=output)
+
+if __name__ == '__main__':
+    app.run(port = 5000, debug=True)
